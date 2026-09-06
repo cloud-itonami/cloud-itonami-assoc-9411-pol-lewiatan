@@ -11,7 +11,9 @@
   `:association-rule/topic` is a SET. A set has no order and `topic` is indexed
   by position, so the port chose the order the data file writes; the assertion
   below compares against that written order rather than against `seq` on a set,
-  which is not stable to rely on."
+  which is not stable to rely on. `topic-order` is written out here by hand on
+  purpose: it is a third transcription, independent of both copies, so a topic
+  that vanished from the data and the port together still fails here."
   (:require [clojure.test :refer [deftest is testing]]
             [association.facts :as facts]
             [kotoba.compiler.core :as compiler]
@@ -25,16 +27,26 @@
 (def ^:private slug "lewiatan")
 (def ^:private fields
   ["id" "title" "association" "isic" "country" "kind" "url" "url-provenance"
-   "established-date" "retrieved-at"])
+   "source-article" "source-quote" "established-date" "last-revised-date"
+   "date-unknown-because" "date-precision" "retrieved-at"])
 (def ^:private kw->field
   {"id" :association-rule/id "title" :association-rule/title
    "association" :association-rule/association "isic" :association-rule/isic
    "country" :association-rule/country "kind" :association-rule/kind
    "url" :association-rule/url "url-provenance" :association-rule/url-provenance
+   "source-article" :association-rule/source-article
+   "source-quote" :association-rule/source-quote
    "established-date" :association-rule/established-date
+   "last-revised-date" :association-rule/last-revised-date
+   "date-unknown-because" :association-rule/date-unknown-because
+   "date-precision" :association-rule/date-precision
    "retrieved-at" :association-rule/retrieved-at})
 (def ^:private entries (vec (facts/spec-basis slug)))
-(def ^:private topic-order [["governance"] ["governance"]])
+(def ^:private topic-order
+  [["governance"] ["governance"] ["publications"] ["governance"] ["awards"]
+   ["european-representation"] ["european-representation"]
+   ["international-representation"] ["social-dialogue"]
+   ["european-representation"]])
 
 (deftest the-fixture-reads-a-real-catalog
   ;; An empty catalog compares equal to an empty port.
@@ -52,6 +64,14 @@
                              :else expected)]
           (is (= expected (present (call 'entry-field slug i f)))))))))
 
+(deftest the-port-runs-out-exactly-where-the-catalog-does
+  ;; A port that answers past the last entry, or refuses one short of it, is
+  ;; wrong in a way every in-range assertion above would still pass.
+  (is (nil? (present (call 'entry-field slug (count entries) "id"))))
+  (is (some? (present (call 'entry-field slug (dec (count entries)) "id"))))
+  (is (nil? (present (call 'entry-field slug -1 "id"))))
+  (is (zero? (call 'topic-count slug (count entries)))))
+
 (deftest topics-are-complete-and-in-the-order-the-port-chose
   (doseq [[i names] (map-indexed vector topic-order)]
     (testing (str "entry " i)
@@ -64,11 +84,18 @@
         (is (= nm (present (call 'topic slug i t))))))))
 
 (deftest by-topic-answers-the-same-entries
-  (doseq [names topic-order t names]
+  ;; Every position, not just the first. With one entry per topic the two are
+  ;; the same assertion; with four they are not, and checking only index 0
+  ;; would pass a port that dropped the rest of every topic.
+  (doseq [t (distinct (mapcat identity topic-order))]
     (testing t
       (let [cljc (mapv :association-rule/id (facts/by-topic slug (keyword t)))]
+        (is (pos? (count cljc)) "a topic nobody has makes the loop below vacuous")
         (is (= (count cljc) (call 'by-topic-count slug t)))
-        (is (= (first cljc) (present (call 'by-topic-id slug t 0)))))))
+        (doseq [[pos id] (map-indexed vector cljc)]
+          (is (= id (present (call 'by-topic-id slug t pos)))))
+        (is (nil? (present (call 'by-topic-id slug t (count cljc))))
+            "and it must run out exactly where the cljc does"))))
   (is (zero? (call 'by-topic-count slug "no-such-topic")))
   (is (nil? (present (call 'by-topic-id slug "no-such-topic" 0)))))
 
