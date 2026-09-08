@@ -5,7 +5,7 @@
   failure mode is not a wrong answer, it is a quiet shrink -- an entry dropped
   in an edit reads the same as an entry that was never there."
   (:require [clojure.test :refer [deftest is testing]]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             [association.facts :as facts]))
 
 (def ^:private entries (facts/spec-basis "lewiatan"))
