@@ -42,7 +42,7 @@
 
 (ns verify-catalog
   (:require [clojure.edn :as edn]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             ["fs" :as fs]
             ["os" :as os]
             ["path" :as path]
@@ -109,12 +109,12 @@
   "Does `q` name `d` at `prec`, the way this source writes dates? ISO is
    accepted too, so a source that does write ISO is not forced into Polish."
   [q d prec]
-  (let [q (str/lower-case q)
+  (let [q (str/lower q)
         [y m dd] (str/split (str d) #"-")
         month (when m (get pl-months (dec (js/parseInt m 10))))
         ;; "01" is written "1"; both spellings are accepted.
         day-forms (when dd (distinct [dd (str (js/parseInt dd 10))]))]
-    (or (str/includes? q (str/lower-case (str d)))
+    (or (str/includes? q (str/lower (str d)))
         (case prec
           :day (boolean (some #(str/includes? q (str % " " month)) day-forms))
           :month (str/includes? q month)
