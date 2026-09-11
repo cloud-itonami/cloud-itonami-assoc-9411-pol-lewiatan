@@ -53,8 +53,8 @@ source's own words, not the date's availability.
 ## Checking the catalog
 
 ```bash
-nbb scripts/verify-catalog.cljs           # structural, offline
-nbb scripts/verify-catalog.cljs --live    # also fetch every source
+kbb --backend sci scripts/verify-catalog.cljk           # structural, offline
+kbb --backend sci scripts/verify-catalog.cljk --live    # also fetch every source
 ```
 
 `--live` does not ask whether each citation resolves; it asks whether
@@ -101,7 +101,7 @@ are chosen so they carry none.
   `com-junkawasaki/root`'s `scripts/compliance-fact-query.cljs`).
 - `src/association_facts.kotoba` — the same catalog as Kotoba, reaching
   the oracle, wasm and both native ISAs. **Generated** by
-  `nbb scripts/gen-kotoba-port.cljs`; `--check` fails if it was
+  `kbb --backend sci scripts/gen-kotoba-port.cljk`; `--check` fails if it was
   hand-edited, and the parity suite compares every field of every entry
   against the `.cljc`.
 
